@@ -1,0 +1,39 @@
+.claude/
+.lab/
+scripts/ghidra/
+skills/
+AGENTS.md
+CLAUDE.md
+mcp.json
+.mcp.json
+.pixi/
+.vs/
+.vscode/
+.idea/
+build/
+build-dev/
+dist/
+bin/
+obj/
+libs/
+release/
+*.user
+*.suo
+*.aps
+*.ilk
+*.pdb
+extern/minhook/
+.headtracking-state.json
+NEXUS_MODS.md
+
+# Local analysis working files, wherever they land. .lab/ above covers the
+# scratch directory itself; a copy of the game executable, a disassembler
+# project or a memory dump is the one thing in this tree that must never reach
+# a commit, because a public repo keeps serving every blob by SHA long after a
+# branch is deleted. Second line of defence, by file extension.
+*.exe
+*.gpr
+*.gar
+*.rep/
+*.dmp
+*.bin

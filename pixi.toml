@@ -1,0 +1,66 @@
+[workspace]
+name = "the-vanishing-of-ethan-carter-redux-headtracking"
+version = "0.0.0"
+description = "Head tracking mod for The Vanishing of Ethan Carter Redux (UE4)"
+license = "MIT"
+license-file = "LICENSE"
+channels = ["conda-forge"]
+platforms = ["win-64"]
+
+[tasks]
+sync = "git submodule update --remote cameraunlock-core"
+
+# No -G: let CMake auto-detect the installed Visual Studio generator. Pinning
+# "Visual Studio 17 2022" broke on CI once the windows runner image moved to
+# VS 2026 (VS 17 absent); auto-detect picks whatever VS the machine has.
+# The guard is the CACHE, not the directory: cmake -B creates build/ before it
+# can fail, so a configure that died half way used to latch - every later run
+# printed "skipping setup" and then failed inside the build with an unrelated
+# error. CMakeCache.txt only exists once a configure has succeeded.
+setup = { cmd = """
+    powershell -NoProfile -Command "if (-not (Test-Path 'build/CMakeCache.txt')) { cmake -B build -A x64 } else { Write-Host 'Build directory configured, skipping setup' -ForegroundColor Yellow }"
+""" }
+
+build = { cmd = "cmake --build build --config Release", depends-on = ["setup"] }
+build-debug = { cmd = "cmake --build build --config Debug", depends-on = ["setup"] }
+
+clean = { cmd = """
+    powershell -NoProfile -Command "if (Test-Path 'build') { Remove-Item 'build' -Recurse -Force }; Write-Host 'Build artifacts cleaned' -ForegroundColor Green"
+""" }
+
+clean-all = { cmd = """
+    powershell -NoProfile -Command "foreach ($d in @('build','release')) { if (Test-Path $d) { Remove-Item $d -Recurse -Force } }; Write-Host 'All build artifacts cleaned' -ForegroundColor Green"
+""" }
+
+# Bump vendored Ultimate ASI Loader copy. Manual, with a commit attached -
+# nothing depends on it; build/package/release consume whatever is committed
+# under vendor/.
+update-deps = { cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/update-deps.ps1" }
+
+# The suite pins the things a coin flip gets wrong: the camera axis signs and
+# composition order, the reticle projection, the zoom compensation bounds, the
+# caller gate and the config boundary. It builds the real mod sources rather
+# than a copy, so it is only worth anything if something RUNS it - packaging
+# depends on it for exactly that reason, which also puts it on the CI path
+# without CI owning any build logic of its own.
+# --no-tests=error because ctest EXITS 0 when it finds no tests at all, so a
+# build tree configured with -DECR_BUILD_TESTS=OFF would sail through this
+# task and package as if the suite had passed.
+test = { cmd = "ctest --test-dir build -C Release --output-on-failure --no-tests=error", depends-on = ["build"] }
+
+# Package both release ZIPs (installer + nexus)
+package = { cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1", depends-on = ["test"] }
+
+# Full release workflow: stamp version, changelog, package, commit, tag, push.
+# Unattended - `pixi run release minor` is the authorization, there is no prompt.
+release = { cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release.ps1" }
+
+# Build + deploy to game directory (dev loop)
+deploy = { cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/deploy.ps1", depends-on = ["build"] }
+
+# Build + deploy into the detected game install (the dev-loop install).
+install = { depends-on = ["deploy"] }
+uninstall = "cmd /c scripts\\uninstall.cmd"
+
+[dependencies]
+# No pixi-managed deps - relies on system CMake + Visual Studio 2022.
