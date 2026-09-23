@@ -26,6 +26,13 @@ without the mod. Nothing is patched on disk either way.
 
 ## Installation
 
+### Lopari
+
+Download [Lopari](https://lopari.app), choose **The Vanishing of Ethan Carter Redux**, and click
+**Play with head tracking**.
+
+### Standalone Installer
+
 1. Download the latest `EthanCarterReduxHeadTracking-v<version>-installer.zip` from the [Releases](https://github.com/itsloopyo/the-vanishing-of-ethan-carter-redux-headtracking/releases) page.
 2. Extract it anywhere.
 3. Double-click `install.cmd`.
