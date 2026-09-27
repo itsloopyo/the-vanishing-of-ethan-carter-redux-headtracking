@@ -9,7 +9,6 @@ An unofficial head tracking mod for The Vanishing of Ethan Carter Redux that mov
 - **Decoupled look and aim** - your head moves the view, your mouse or controller still controls where you look and interact.
 - **6DOF tracking** - rotation and position, so you can lean in and peek around what the level puts in your way.
 - **Works with any OpenTrack compatible tracker** - free options available for PC, iOS and Android
-- **Field of view offset** - adds to the game's own Field of View slider, so you can go past what it offers.
 
 ## Requirements
 
