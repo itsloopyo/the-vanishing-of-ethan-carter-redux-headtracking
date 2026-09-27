@@ -13,6 +13,14 @@
     { "source": "plugins/EthanCarterReduxHeadTracking.asi", "target": "EthanCarter/Binaries/Win64/EthanCarterReduxHeadTracking.asi" }
   ],
 
+  "config": {
+    "path": "EthanCarter/Binaries/Win64/CameraUnlock.ini",
+    "anchor": "game_root",
+    "legacy_source": "EthanCarter/Binaries/Win64/HeadTracking.ini",
+    "canonical_since": "0.0.1",
+    "per_game": {}
+  },
+
   "runtime_requirements": [],
   "dependencies": []
 }
