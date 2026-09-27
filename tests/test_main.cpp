@@ -8,7 +8,6 @@ int RunCameraPoseTests();
 int RunCallerGateTests();
 int RunFovTests();
 int RunLogThrottleTests();
-int RunConfigTests();
 
 int main() {
     std::cout << "Ethan Carter Redux Head Tracking Tests\n";
@@ -20,7 +19,6 @@ int main() {
     failures += RunCallerGateTests();
     failures += RunFovTests();
     failures += RunLogThrottleTests();
-    failures += RunConfigTests();
 
     if (failures == 0) {
         std::cout << "All tests passed!\n";

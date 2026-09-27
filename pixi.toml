@@ -43,16 +43,27 @@ update-deps = { cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File scrip
 # caller gate and the config boundary. It builds the real mod sources rather
 # than a copy, so it is only worth anything if something RUNS it - packaging
 # depends on it for exactly that reason, which also puts it on the CI path
-# without CI owning any build logic of its own. It also runs the config
-# differential test, which holds the frozen HeadTracking.ini reader to the dev
-# build's.
+# without CI owning any build logic of its own. It also runs the config tests,
+# the config differential test, which holds the frozen HeadTracking.ini reader
+# to the dev build's and the migration into CameraUnlock.ini to that reader, and
+# core's canonical config lint over every file that test migrated (with node).
 # --no-tests=error because ctest EXITS 0 when it finds no tests at all, so a
 # build tree configured with -DECR_BUILD_TESTS=OFF would sail through this
 # task and package as if the suite had passed.
 test = { cmd = "ctest --test-dir build -C Release --output-on-failure --no-tests=error", depends-on = ["build"] }
 
+# Rewrites CameraUnlock.ini, the committed config, from the config table after a
+# change to a row, a comment or a default, then the launcher manifest's config
+# descriptor per_game from it. ecr_config_tests fails until it has run.
+render-config = { cmd = "build/tests/Release/ecr_config_tests.exe --render-config CameraUnlock.ini && node cameraunlock-core/scripts/encode-seed.mjs", depends-on = ["build"] }
+
 # Package both release ZIPs (installer + nexus)
 package = { cmd = "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-release.ps1", depends-on = ["test"] }
+
+# Checks the newest release/*-installer.zip's launcher-manifest.json against the
+# files in the ZIP, and that neither ZIP carries CameraUnlock.ini or
+# HeadTracking.ini. Run it after package.
+validate-manifest = "node cameraunlock-core/scripts/validate-manifest.mjs"
 
 # Full release workflow: stamp version, changelog, package, commit, tag, push.
 # Unattended - `pixi run release minor` is the authorization, there is no prompt.
@@ -66,7 +77,8 @@ install = { depends-on = ["deploy"] }
 uninstall = "cmd /c scripts\\uninstall.cmd"
 
 [dependencies]
-# CMake and Visual Studio come from the system. Packaging runs core's config
-# descriptor check (Copy-SharedBundle) with node. Pinned to the release core's
+# CMake and Visual Studio come from the system. Node runs the canonical config
+# lint in `test`, render-config's encode-seed step, validate-manifest and core's
+# config descriptor check in packaging (Copy-SharedBundle). Pinned to the release core's
 # own lock resolves.
 nodejs = "==26.5.0"

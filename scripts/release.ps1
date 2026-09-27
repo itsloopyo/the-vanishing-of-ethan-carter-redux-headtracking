@@ -43,6 +43,7 @@ try {
     $verLine = Select-String -Path 'CMakeLists.txt' -Pattern 'project\(EthanCarterReduxHeadTracking VERSION ([0-9]+\.[0-9]+\.[0-9]+)'
     if (-not $verLine) { throw 'Could not read the project version from CMakeLists.txt' }
     $script:ReleaseVersion = Resolve-ReleaseVersion -Argument $Version -CurrentVersion $verLine.Matches[0].Groups[1].Value
+    Assert-ReleaseNotBelowCanonicalSince -RepoRoot $root -Version $script:ReleaseVersion
 
     # CMake's project(... VERSION) accepts digits and dots only, so a prerelease
     # suffix is stamped into a CMakeLists.txt that then refuses to configure -

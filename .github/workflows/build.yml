@@ -36,8 +36,9 @@ jobs:
     name: Build and Validate
     runs-on: windows-latest
     # Without this a hung MSBuild or a stalled clone runs to GitHub's six-hour
-    # default, at the Windows runner's ten-times multiplier.
-    timeout-minutes: 30
+    # default, at the Windows runner's ten-times multiplier. The config
+    # differential test alone runs six to eight minutes on a desktop.
+    timeout-minutes: 45
     if: ${{ !startsWith(github.event.head_commit.message, 'Release v') }}
 
     steps:

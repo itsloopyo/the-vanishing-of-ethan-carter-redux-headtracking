@@ -68,7 +68,7 @@ The `-nexus.zip` release archive holds the same `.asi` already under the
 `EthanCarter\Binaries\Win64\` path it belongs in, but no loader. Whichever
 archive you start from, `winmm.dll` has to be in place or nothing loads.
 
-`HeadTracking.ini` is written next to the `.asi` on first launch, so there is
+`CameraUnlock.ini` is written next to the `.asi` on first launch, so there is
 nothing to copy for it.
 
 ## Setting Up OpenTrack
@@ -130,7 +130,9 @@ the machine it came from.
 
 ## Controls
 
-Two equivalent binding sets. Use whichever your keyboard has.
+Two equivalent binding sets. Use whichever your keyboard has. Both are the
+defaults of the key lists in `CameraUnlock.ini` (see Configuration), where each
+action can be given other keys:
 
 | Action | Nav-cluster | Chord |
 |--------|-------------|-------|
@@ -141,86 +143,141 @@ Two equivalent binding sets. Use whichever your keyboard has.
 Cycling the tracking mode steps through full tracking, then rotation only, then
 position only, then back to full.
 
+The tracking mode and the yaw mode are saved to `CameraUnlock.ini` the moment
+you change them, so the game starts in them next time. Toggling tracking with
+`End` lasts for the session only; whether tracking starts on is
+`EnableOnStartup`.
+
 ## Configuration
 
-`HeadTracking.ini` is written next to the mod's `.asi` in
-`<game>\EthanCarter\Binaries\Win64\` on first launch. Edit it and restart the
-game to apply. Keys missing from an older file fall back to their defaults, so
-an existing config keeps working after an update.
+<!-- cameraunlock:config -->
+The mod reads its settings from `EthanCarter\Binaries\Win64\CameraUnlock.ini` in the game folder, and creates the file when it starts and finds none. Edit it with any text editor.
+
+A setting set to `default` takes its value from `Defaults.ini`, which every head tracking mod that keeps its settings in `CameraUnlock.ini` reads. Head tracking mods that keep their settings in another file do not read it. Writing a value in place of `default` changes that setting for this game only. When the mod saves a setting that a hotkey changed in game, it writes the new value in place of `default`, so that setting no longer follows `Defaults.ini` in this game until you set it to `default` again.
+
+`Defaults.ini` is `%AppData%\CameraUnlock\Defaults.ini` on Windows; `$XDG_CONFIG_HOME/CameraUnlock/Defaults.ini` on Linux, or `~/.config/CameraUnlock/Defaults.ini` where `XDG_CONFIG_HOME` is not set, under Wine and Proton too; and `~/Library/Application Support/CameraUnlock/Defaults.ini` on macOS. The mod's log, where it writes one, names the file it read.
+
+When the mod starts and finds no `Defaults.ini`, it creates one holding the built-in values, unless Windows runs the game as a packaged app. The mod never changes `Defaults.ini` after that. Edit it with any text editor.
+
+The built-in value of each setting set to `default` below:
+
+- `UdpPort=4242`
+- `EnableOnStartup=true`
+- `WorldSpaceYaw=true`
+- `RotationEnabled=true`
+- `LocalSmoothing=0.0`
+- `RemoteSmoothing=0.15`
+- `PositionEnabled=true`
+- `PositionLimitX=0.3`
+- `PositionLimitY=0.2`
+- `PositionLimitYDown=0.2`
+- `PositionLimitZ=0.4`
+- `PositionLimitZBack=0.1`
+- `CollisionEnabled=true`
+- `CollisionReleaseSmoothing=0.9`
+- `ToggleKey=End, Ctrl+Shift+Y`
+- `CycleTrackingModeKey=PageUp, Ctrl+Shift+G`
+- `YawModeKey=PageDown, Ctrl+Shift+H`
+
+With every setting at its default, the file reads:
 
 ```ini
-; The Vanishing of Ethan Carter Redux Head Tracking - configuration
-; Edit values, restart the game to apply.
+; The Vanishing of Ethan Carter Redux head tracking settings.
+; Comments start with ; and go on their own line. Text after a value is part of the value.
+; Hotkeys are key names such as End, PageUp or Ctrl+Shift+Y. Separate several with commas; leave empty for none.
+; A setting set to default takes its value from Defaults.ini, which every head tracking mod
+; that keeps its settings in CameraUnlock.ini reads: %AppData%\CameraUnlock\Defaults.ini on
+; Windows, $XDG_CONFIG_HOME/CameraUnlock/Defaults.ini (normally ~/.config/CameraUnlock) on
+; Linux, under Wine and Proton too, and ~/Library/Application Support/CameraUnlock/Defaults.ini
+; on macOS. The log names the file it read. Write a value instead of default to change that
+; setting for this game only.
+
+[CameraUnlock]
+; Written by the mod. Leave this section in place.
+ConfigFormat=1
 
 [Network]
-; UDP port the tracker sends to. Accepted 1024 to 65535.
-UdpPort=4242
+; UDP port the mod receives tracker data on (OpenTrack protocol).
+UdpPort=default
 
 [General]
-EnableOnStartup=1
-; Yaw mode: 1 = horizon-locked yaw (default), 0 = camera-local yaw.
-; Toggled in game with Page Down or Ctrl+Shift+H.
-WorldSpaceYaw=1
+; true: head tracking is on when the game starts. ToggleKey turns it on and off.
+EnableOnStartup=default
+; true: yaw turns around the world's up axis. false: around the camera's own up axis.
+WorldSpaceYaw=default
+; true: turning your head turns the view.
+; Tracking mode at startup, with PositionEnabled. The mode hotkey changes both.
+RotationEnabled=default
 
-[Hotkeys]
-; Virtual-key code for the yaw-mode toggle. 0x22 = Page Down.
-YawModeKey=0x22
-
-[Rotation]
-YawSensitivity=1.0
-PitchSensitivity=1.0
-RollSensitivity=1.0
-InvertYaw=0
-InvertPitch=0
-InvertRoll=0
-; Smoothing applied when the tracker runs on this machine (loopback).
-; 0 = no smoothing, 1 = heavy. Covers rotation and position.
-LocalSmoothing=0.0
-; Smoothing applied when the tracker is a remote device on the network.
-; 0 = no smoothing, 1 = heavy. Covers rotation and position.
-RemoteSmoothing=0.15
-
-[Camera]
-; Degrees added to the game's own field of view. The game has a Field of
-; View slider in Options -> Graphics, and this adds to whatever you set
-; there, so it can reach past that slider's range. 0 = leave the game's
-; field of view exactly as it is. Accepted -60 to +60; the result is held
-; between 40 and 150 degrees. The rendered view only - interaction traces,
-; audio and streaming keep the game's own value.
-FovOffset=0
+[Smoothing]
+; Smoothing when the tracker runs on this PC. 0 is the least, 1 the most.
+LocalSmoothing=default
+; Smoothing when the tracker is another device on the network, such as a phone.
+; 0 is the least, 1 the most.
+RemoteSmoothing=default
 
 [Position]
-Enabled=1
-SensitivityX=1.0
-SensitivityY=1.0
-SensitivityZ=1.0
-LimitX=0.30
-LimitY=0.20
-LimitZ=0.40
-LimitZBack=0.10
-; Lean collision. The mod sweeps the level from the camera the game put
-; there toward where your head wants to go and cuts the lean to whatever
-; the room leaves, so leaning into a wall stops at the wall instead of
-; putting the view inside it. 0 turns that off.
-CollisionEnabled=1
-; How far off a surface the view is held, in centimetres. Accepted 11 to 200.
-CollisionRadius=15
-; Which collision channel the sweep runs on. 0 is Visibility.
-CollisionChannel=0
-; How quickly the lean opens back up once you step clear of something.
-; 0 = instantly, 1 = very slowly. Leaning INTO something always stops at once.
-CollisionReleaseSmoothing=0.90
+; true: moving your head moves the view.
+; Tracking mode at startup, with RotationEnabled. The mode hotkey changes both.
+PositionEnabled=default
+; How far, in metres, leaning left or right can move the view.
+PositionLimitX=default
+; How far, in metres, raising your head can move the view.
+PositionLimitY=default
+; How far, in metres, lowering your head can move the view.
+PositionLimitYDown=default
+; How far, in metres, leaning forward can move the view.
+PositionLimitZ=default
+; How far, in metres, leaning back can move the view.
+PositionLimitZBack=default
+; true: leaning stops at walls instead of moving the view through them.
+CollisionEnabled=default
+; How far the view is held off a wall when you lean into it, in centimetres. Keep it
+; above 10, the camera's near clip, or the wall is cut away before the view reaches it.
+CollisionMargin=15.0
+; Which of the game's collision channels the wall check tests against. 0 is Visibility.
+; CollisionChannel=0
+; How gently the view eases back out after a wall stopped a lean.
+; 0 is the quickest, 1 the slowest.
+CollisionReleaseSmoothing=default
 
-[Reticle]
-; The game draws its own crosshair (Options -> Controls -> Display Dot
-; Crosshair). Head tracking moves the view off the direction you are
-; actually pointing, so the mod moves that crosshair onto the point your
-; look and interaction ray really hits. 0 leaves the crosshair fixed at
-; the centre of the frame.
-MoveCrosshair=1
-; Which collision channel the aim ray runs on. 0 is Visibility.
-AimTraceChannel=0
+[Hotkeys]
+; Turns head tracking on and off.
+ToggleKey=default
+; Changes the tracking mode: rotation and position, rotation only, position only.
+CycleTrackingModeKey=default
+; Switches yaw between the world's up axis and the camera's own (WorldSpaceYaw).
+YawModeKey=default
+
+[Camera]
+; Degrees added to the game's field of view, -60 to 60. 0 leaves it as it is. The
+; game has a Field of View slider in Options -> Graphics, and this adds to whatever
+; you set there, so it can reach past that slider's range. The result is held
+; between 40 and 150 degrees. The rendered view only: interaction, audio and
+; streaming keep the game's own value.
+FovOffset=0.0
+; Which of the game's collision channels the aim ray runs on, to put the game's
+; crosshair over what the aim is pointing at. 0 is Visibility.
+; AimTraceChannel=0
 ```
+<!-- /cameraunlock:config -->
+
+### Field of view
+
+The game has its own Field of View slider in Options -> Graphics. `FovOffset`
+under `[Camera]` adds degrees to whatever that slider is set to, from -60 to
+60, so it can reach past the slider's range; the result is held between 40 and
+150 degrees, and 0 leaves the game's field of view exactly as it is. Only the
+rendered view changes: interaction, audio and streaming keep the game's own
+value.
+
+### The crosshair
+
+The game draws its own dot crosshair (Options -> Controls -> Display Dot
+Crosshair). Head tracking moves the view off the direction you are pointing, so
+the mod moves that crosshair onto the point your look and interaction ray
+really hits. `AimTraceChannel` and `CollisionChannel` name collision channels of
+the game itself, so the file holds them commented out at their defaults.
 
 ## Troubleshooting
 
@@ -261,8 +318,9 @@ AimTraceChannel=0
   camera-local yaw. World-locked is the default and keeps yaw about the
   horizon. Camera-local turns it about the camera's own up-axis, which leans
   the view once the camera is pitched up or down.
-- If an axis moves the wrong way entirely, set `InvertYaw`, `InvertPitch` or
-  `InvertRoll` to `1` in `HeadTracking.ini`.
+- If an axis moves the wrong way entirely, invert it in your tracker's own
+  settings (OpenTrack's Output tab, or the phone app). The mod applies the pose
+  as the tracker sends it.
 
 **The game window moved when I launched**
 

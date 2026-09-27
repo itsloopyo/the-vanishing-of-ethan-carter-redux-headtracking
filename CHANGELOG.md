@@ -1,5 +1,34 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- The tracking mode and the yaw mode are saved the moment you change them with their hotkeys, so the game starts in them next time. Turning head tracking on or off with End still lasts for the session only; whether tracking starts on is `EnableOnStartup`.
+- A setting set to `default` in `CameraUnlock.ini` takes its value from `Defaults.ini`, which every head tracking mod that keeps its settings in `CameraUnlock.ini` reads. Head tracking mods that keep their settings in another file do not read it, and neither do earlier versions of this mod. Writing a value in place of `default` changes that setting for this game only. When the mod saves a setting that a hotkey changed in game, it writes the new value in place of `default`, so that setting no longer follows `Defaults.ini` in this game until you set it to `default` again.
+- `Defaults.ini` is `%AppData%\CameraUnlock\Defaults.ini` on Windows; `$XDG_CONFIG_HOME/CameraUnlock/Defaults.ini` on Linux, or `~/.config/CameraUnlock/Defaults.ini` where `XDG_CONFIG_HOME` is not set, under Wine and Proton too; and `~/Library/Application Support/CameraUnlock/Defaults.ini` on macOS. The mod's log, where it writes one, names the file it read.
+- When the mod starts and finds no `Defaults.ini`, it creates one holding the built-in values, unless Windows runs the game as a packaged app. The mod never changes `Defaults.ini` after that.
+
+### Changed
+
+- Settings move to `EthanCarter\Binaries\Win64\CameraUnlock.ini`. Earlier versions of the mod kept these settings in `HeadTracking.ini`, in the same folder. The first time this version starts and finds no `CameraUnlock.ini`, it reads your settings from `HeadTracking.ini` and writes them into `CameraUnlock.ini`. It never changes `HeadTracking.ini`, and does not read it again while `CameraUnlock.ini` exists.
+- A setting that the defaults the README shows set to `default` is written as `default` when you never changed it from the default earlier versions used, because `HeadTracking.ini` does not hold it or holds that default. It then follows `Defaults.ini`, so it takes the value `Defaults.ini` gives it, or the built-in value where `Defaults.ini` gives none, which can differ from the default earlier versions used. A setting you changed is written with the value imported for it, or as `default` where that value equals its default at that start.
+- `RotationEnabled` and `PositionEnabled` are one setting here, the tracking mode, so both are written as `default` or neither is.
+- Comments, and keys the mod never read, are not carried over. Nor are these, where your old file had them:
+  - A sensitivity or axis inversion you changed from its default. Set these in your tracker instead.
+  - `[Reticle] MoveCrosshair=0`. The game's crosshair now always follows the aim.
+- An older version of the mod reads `HeadTracking.ini` and never reads `CameraUnlock.ini`, so a setting you change after updating is not in `HeadTracking.ini`.
+- Deleting only `CameraUnlock.ini` makes the next start read `HeadTracking.ini` again. To go back to the defaults, replace everything in `CameraUnlock.ini` with the defaults the README shows. Every setting they set to `default` then follows `Defaults.ini`.
+- Hotkeys are written as key names, and each hotkey lists every key that triggers it, the Ctrl+Shift chord included: `ToggleKey=End, Ctrl+Shift+Y`. The toggle and tracking mode keys, fixed before, can now be changed as well.
+- Several settings have new names and sections: `[Position] Enabled` is the tracking mode, `RotationEnabled` and `PositionEnabled`; `LocalSmoothing` and `RemoteSmoothing` are under `[Smoothing]`; the position limits are `PositionLimitX`, `PositionLimitY`, `PositionLimitZ` and `PositionLimitZBack`; `CollisionRadius` is `CollisionMargin`; and `AimTraceChannel` is under `[Camera]`. The import carries each value across.
+- The downward head travel limit is its own setting, `PositionLimitYDown`. Earlier versions bounded both directions with `LimitY`, so the import carries your `LimitY` into both.
+
+### Removed
+
+- The sensitivity and axis inversion settings. Set these in your tracker app instead.
+- With these settings at their shipped defaults the camera moves as it did before.
+- `[Reticle] MoveCrosshair`. The game's crosshair always follows the aim now.
+
 ## [0.0.0] - 2026-09-08
 
 ### Added

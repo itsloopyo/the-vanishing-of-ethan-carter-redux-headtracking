@@ -6,7 +6,9 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 #include <windows.h>
 #include <psapi.h>
@@ -30,8 +32,11 @@
 #include "cameraunlock/camera/lean_clamp.h"
 #include "cameraunlock/diagnostics/crash_handler.h"
 #include "cameraunlock/hooks/hook_manager.h"
+#include "cameraunlock/config/defaults_file.h"
 #include "cameraunlock/input/chord_hotkeys.h"
 #include "cameraunlock/input/hotkey_poller.h"
+#include "cameraunlock/input/key_binding_registration.h"
+#include "cameraunlock/input/key_bindings.h"
 #include "cameraunlock/os/module_paths.h"
 #include "cameraunlock/protocol/udp_receiver.h"
 #include "cameraunlock/time/frame_clock.h"
@@ -47,8 +52,9 @@ namespace ue = ::cameraunlock::unreal;
 namespace hooks = ::cameraunlock::hooks;
 
 using cameraunlock::TrackingMode;
+#if ECR_DEV_HOTKEYS
 using cameraunlock::input::ChordGuarded;
-using cameraunlock::input::NavGuarded;
+#endif
 using cameraunlock::time::FrameClock;
 
 using Session = cameraunlock::HeadTrackingSession<cameraunlock::UdpReceiver>;
@@ -60,23 +66,16 @@ using Session = cameraunlock::HeadTrackingSession<cameraunlock::UdpReceiver>;
 static_assert(Session::kHasRemoteConnection,
               "receiver must expose IsRemoteConnection() for per-connection smoothing");
 
-// Virtual-key codes for the AGENTS.md default bindings. The nav-cluster keys are
-// the primary bindings; the Ctrl+Shift chords are the alternative for keyboards
-// without a nav cluster.
-namespace vk {
-constexpr int kEnd    = 0x23;
-constexpr int kPageUp = 0x21;
-constexpr int kY = 0x59;
-constexpr int kG = 0x47;
-constexpr int kH = 0x48;
 #if ECR_DEV_HOTKEYS
+// Virtual-key codes for the developer build's diagnostic chords.
+namespace vk {
 constexpr int kU = 0x55;
 constexpr int kJ = 0x4A;
 constexpr int kB = 0x42;
 constexpr int kN = 0x4E;
 constexpr int kF = 0x46;
-#endif
 }
+#endif
 
 // ---- state ---------------------------------------------------------------
 
@@ -206,8 +205,6 @@ struct AimResult {
 AimResult ProjectCleanAim(std::uintptr_t controller, const ue::FVector& cleanEye,
                           const ue::FQuat4d& cleanQ, const FVector3f& renderLocation,
                           const FRotator3f& renderRotation) {
-    if (!g_config.move_crosshair) return AimResult{};
-
     // Without a readable field of view the tangents fall back to the identity,
     // which projects as though the frame were 90 degrees on both axes - a mark
     // placed confidently in the wrong place. Skipping here also spares the frame
@@ -407,14 +404,19 @@ const char* TrackingModeName(TrackingMode mode) {
 
 // Three-state, not an on/off toggle: the session drives rotation and position
 // independently, so a player who wants leaning without head turning can have it.
+// The session's mode is an atomic the render thread reads each frame, so the
+// cycle applies it here and then saves it.
 void CycleTrackingMode() {
-    Log::Line("hotkey: tracking mode %s", TrackingModeName(g_session->CycleMode()));
+    const TrackingMode mode = g_session->CycleMode();
+    Log::Line("hotkey: tracking mode %s", TrackingModeName(mode));
+    config::SaveTrackingMode(mode);
 }
 
 void ToggleYawMode() {
     const bool worldSpace = !g_worldSpaceYaw.load();
     g_worldSpaceYaw.store(worldSpace);
     Log::Line("hotkey: yaw mode %s", worldSpace ? "world" : "local");
+    config::SaveWorldSpaceYaw(worldSpace);
 }
 
 #if ECR_DEV_HOTKEYS
@@ -429,19 +431,27 @@ void CycleInjectMode(int direction) {
 }
 #endif
 
+// The table's hotkey codec only lets through a list this parser reads.
+std::vector<cameraunlock::input::KeyBinding> Bindings(const char* key, const std::string& list) {
+    const cameraunlock::input::KeyBindingsParseResult parsed = cameraunlock::input::ParseKeyBindings(list);
+    if (!parsed.ok()) throw std::logic_error(std::string(key) + "='" + list + "': " + parsed.error);
+    return parsed.bindings;
+}
+
 void RegisterHotkeys() {
     g_hotkeys = std::make_unique<cameraunlock::input::HotkeyPoller>();
 
-    // Nav-cluster (AGENTS.md default bindings). Suppressed while Ctrl+Shift is
-    // held so the chord path is the sole trigger for those combos.
-    g_hotkeys->AddHotkey(vk::kEnd,              NavGuarded([] { ToggleTracking(); }));
-    g_hotkeys->AddHotkey(vk::kPageUp,           NavGuarded([] { CycleTrackingMode(); }));
-    g_hotkeys->AddHotkey(g_config.yaw_mode_key, NavGuarded([] { ToggleYawMode(); }));
-
-    // Ctrl+Shift chord alternatives (Y/G/H cluster).
-    g_hotkeys->AddHotkey(vk::kY, ChordGuarded([] { ToggleTracking(); }));
-    g_hotkeys->AddHotkey(vk::kG, ChordGuarded([] { CycleTrackingMode(); }));
-    g_hotkeys->AddHotkey(vk::kH, ChordGuarded([] { ToggleYawMode(); }));
+    // Each list holds every key that fires its action, the Ctrl+Shift chord
+    // included. A key without modifiers stays silent while Ctrl and Shift are
+    // both held, so Ctrl+Shift+<key> reaches only a binding that names the
+    // chord.
+    cameraunlock::input::RegisterKeyBindings(*g_hotkeys, Bindings("ToggleKey", g_config.toggle_key),
+                                             [] { ToggleTracking(); });
+    cameraunlock::input::RegisterKeyBindings(*g_hotkeys,
+                                             Bindings("CycleTrackingModeKey", g_config.cycle_tracking_mode_key),
+                                             [] { CycleTrackingMode(); });
+    cameraunlock::input::RegisterKeyBindings(*g_hotkeys, Bindings("YawModeKey", g_config.yaw_mode_key),
+                                             [] { ToggleYawMode(); });
 
 #if ECR_DEV_HOTKEYS
     // Dev: re-confirm the render caller in-game (cycle which GPV caller is
@@ -467,15 +477,6 @@ void RegisterHotkeys() {
 void ApplyConfigToSession() {
     g_trackingEnabled.store(g_config.enable_on_startup);
     g_worldSpaceYaw.store(g_config.world_space_yaw);
-
-    cameraunlock::SensitivitySettings sens;
-    sens.yaw          = g_config.yaw_sensitivity;
-    sens.pitch        = g_config.pitch_sensitivity;
-    sens.roll         = g_config.roll_sensitivity;
-    sens.invert_yaw   = g_config.invert_yaw;
-    sens.invert_pitch = g_config.invert_pitch;
-    sens.invert_roll  = g_config.invert_roll;
-    g_session->GetProcessor().SetSensitivity(sens);
     // Both smoothing parameters cover rotation and position; the session picks
     // between them per connection from the receiver's source-address check, so a
     // switch from a local OpenTrack instance to a phone on WiFi mid-session needs
@@ -485,7 +486,7 @@ void ApplyConfigToSession() {
 
     trace::SetAimChannel(g_config.aim_trace_channel);
     trace::SetLeanChannel(g_config.collision_channel);
-    trace::SetLeanRadius(g_config.collision_radius);
+    trace::SetLeanRadius(g_config.collision_margin);
     // The sphere sweep reports where its CENTRE stopped, so the radius IS the
     // standoff and the clamp's own skin must be zero or it is applied twice.
     cameraunlock::camera::LeanClampSettings lean;
@@ -494,22 +495,13 @@ void ApplyConfigToSession() {
     g_leanClamp.SetSettings(lean);
 
     auto& position = g_session->GetPositionProcessor().GetSettings();
-    position.sensitivity_x = g_config.position_sensitivity_x;
-    position.sensitivity_y = g_config.position_sensitivity_y;
-    position.sensitivity_z = g_config.position_sensitivity_z;
     position.limit_x       = g_config.limit_x;
-    // The clamp is [-limit_y_down, +limit_y] and limit_y_down carries its own
-    // default, so mirror the one configured vertical limit the way
-    // PositionSettings::Symmetric does. Left unset, raising LimitY widened the
-    // upward budget only and downward travel stayed pinned at 0.20m.
     position.limit_y       = g_config.limit_y;
-    position.limit_y_down  = g_config.limit_y;
+    position.limit_y_down  = g_config.limit_y_down;
     position.limit_z       = g_config.limit_z;
     position.limit_z_back  = g_config.limit_z_back;
 
-    g_session->SetMode(g_config.position_enabled
-        ? TrackingMode::RotationAndPosition
-        : TrackingMode::RotationOnly);
+    g_session->SetMode(config::StartupTrackingMode(g_config));
 }
 
 // Log rotation is core's: Open() renames the outgoing generation to
@@ -535,27 +527,22 @@ void OpenLog() {
 }
 
 void InitConfig() {
-    const std::string exeDir = cameraunlock::os::HostExeDirectoryNarrow();
+    const std::wstring exeDir = cameraunlock::os::HostExeDirectory();
     if (exeDir.empty()) {
-        // The INI layer is ANSI (GetPrivateProfile*A). A game directory with no
-        // ANSI form has no path to read or write, and narrowing it best-fit would
-        // address somebody else's folder.
-        Log::Line("config: the game directory has no representable ANSI path, so "
-                  "HeadTracking.ini cannot be read or written - built-in defaults "
-                  "are used for this session.");
+        Log::Line("config: the game directory could not be resolved, so CameraUnlock.ini "
+                  "cannot be read or written - built-in defaults are used for this session.");
     } else {
-        WriteDefaultConfigIfMissing(exeDir);
-        LoadConfig(exeDir, g_config);
+        g_config = config::Load(exeDir, cameraunlock::config::DefaultsFile::PerUser());
     }
-    Log::Line("config: udp_port=%d enable=%d yaw_sens=%.2f local_smoothing=%.2f remote_smoothing=%.2f position=%d yaw_mode=%s fov_offset=%+.1f",
+    Log::Line("config: udp_port=%d enable=%d local_smoothing=%.2f remote_smoothing=%.2f rotation=%d position=%d yaw_mode=%s fov_offset=%+.1f",
         g_config.udp_port, g_config.enable_on_startup ? 1 : 0,
-        g_config.yaw_sensitivity, g_config.local_smoothing, g_config.remote_smoothing,
-        g_config.position_enabled ? 1 : 0,
+        g_config.local_smoothing, g_config.remote_smoothing,
+        g_config.rotation_enabled ? 1 : 0, g_config.position_enabled ? 1 : 0,
         g_config.world_space_yaw ? "world" : "local",
         g_config.fov_offset);
-    Log::Line("config: move_crosshair=%d aim_channel=%d collision=%d radius=%.0f channel=%d release=%.2f",
-        g_config.move_crosshair ? 1 : 0, g_config.aim_trace_channel,
-        g_config.collision_enabled ? 1 : 0, g_config.collision_radius,
+    Log::Line("config: aim_channel=%d collision=%d margin=%.0f channel=%d release=%.2f",
+        g_config.aim_trace_channel,
+        g_config.collision_enabled ? 1 : 0, g_config.collision_margin,
         g_config.collision_channel, g_config.collision_release_smoothing);
 }
 
@@ -678,12 +665,13 @@ DWORD WINAPI BootstrapThread(LPVOID) {
     // nothing on their own: without the world queries there is no lean clamp and
     // no aim point, and without the HUD detour the crosshair simply stays put.
     trace::Ready();
-    if (g_config.move_crosshair) reticle::Install();
+    reticle::Install();
 
     RegisterHotkeys();
-    Log::Line("init complete. End=toggle PageUp=tracking mode VK 0x%02X=yawmode "
-              "(chords Ctrl+Shift+Y/G/H). Waiting for OpenTrack on UDP %d.",
-        g_config.yaw_mode_key, g_config.udp_port);
+    Log::Line("init complete. toggle=[%s] tracking mode=[%s] yaw mode=[%s]. "
+              "Waiting for OpenTrack on UDP %d.",
+        g_config.toggle_key.c_str(), g_config.cycle_tracking_mode_key.c_str(),
+        g_config.yaw_mode_key.c_str(), g_config.udp_port);
 
     // Last, because it blocks until the game's window has stopped moving, which
     // is tens of seconds into a cold start. Everything above is what tracking

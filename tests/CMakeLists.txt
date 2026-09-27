@@ -10,7 +10,6 @@ add_executable(ecr_headtracking_tests
     caller_gate_tests.cpp
     fov_tests.cpp
     log_throttle_tests.cpp
-    config_tests.cpp
 )
 
 foreach(source ${MOD_CORE_SOURCES})
@@ -34,13 +33,30 @@ target_compile_definitions(ecr_headtracking_tests PRIVATE ECR_DEV_HOTKEYS=0)
 
 add_test(NAME ecr_headtracking_tests COMMAND ecr_headtracking_tests)
 
+# The canonical config, the committed file and the toggles' saves. Also the
+# renderer behind `pixi run render-config` (--render-config <path>).
+add_executable(ecr_config_tests
+    config_tests.cpp
+    ${CMAKE_SOURCE_DIR}/src/config.cpp
+    ${CMAKE_SOURCE_DIR}/src/legacy_config/legacy_config.cpp
+)
+target_include_directories(ecr_config_tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/cameraunlock-core/cpp/include
+)
+target_compile_definitions(ecr_config_tests PRIVATE ECR_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_link_libraries(ecr_config_tests PRIVATE cameraunlock)
+add_test(NAME ecr_config_tests COMMAND ecr_config_tests)
+
 # The canonical config conversion's differential test: the dev build's reader
 # (byte copies in config_differential/oracle/src) and startup code against the
-# frozen reader in src/legacy_config/.
+# frozen reader in src/legacy_config/, and that reader against the config
+# owner's migration into CameraUnlock.ini.
 set(ECR_DIFFERENTIAL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/config_differential)
 add_executable(ecr_config_differential
     ${ECR_DIFFERENTIAL_DIR}/differential_tests.cpp
     ${ECR_DIFFERENTIAL_DIR}/oracle/oracle_reader.cpp
+    ${CMAKE_SOURCE_DIR}/src/config.cpp
     ${CMAKE_SOURCE_DIR}/src/legacy_config/legacy_config.cpp
 )
 target_include_directories(ecr_config_differential PRIVATE
@@ -51,6 +67,13 @@ target_include_directories(ecr_config_differential PRIVATE
 target_compile_definitions(ecr_config_differential PRIVATE ECR_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 target_link_libraries(ecr_config_differential PRIVATE cameraunlock)
 add_test(NAME ecr_config_differential COMMAND ecr_config_differential)
+
+# Core's canonical config lint over the committed file and every file the
+# differential test migrated, which it writes beside itself under migrated\.
+add_test(NAME ecr_config_lint COMMAND node
+    ${ECR_DIFFERENTIAL_DIR}/lint-migrated.mjs
+    $<TARGET_FILE_DIR:ecr_config_differential>/migrated)
+set_tests_properties(ecr_config_lint PROPERTIES DEPENDS ecr_config_differential)
 
 # What the differential test compiles is pinned by hash, line endings aside:
 # the oracle's byte copies must stay the dev build's (git show dev:src/<file>),
