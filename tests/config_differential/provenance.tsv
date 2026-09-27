@@ -1,0 +1,26 @@
+# What the differential test compares, and where each file came from.
+# Columns: role, source (commit:path, or the path in this repo), sha256 of the text (CR removed).
+# The rolling dev pre-release (tag dev, commit 3db7b5e, core pin ee8cc72) is the only build this repo
+# has published; there is no v* tag and no predecessor repo. No release ZIP or launcher manifest
+# shipped or seeded a HeadTracking.ini: every player's file is the one WriteDefaultConfigIfMissing
+# wrote on the first run, edited or not. The reader was frozen at a128a2e, whose src/ matches dev's
+# byte for byte, and every core source either reader compiles holds the same bytes at ee8cc72 and at
+# the current pin, so comparison 1 is empty by construction.
+published reader	dev:src/config.cpp, compiled as tests/config_differential/oracle/src/config.cpp	57fdeee3ecf1e1762d2616bd9cfdb2226f75f76b6be047d390d882288c672e85
+published reader	dev:src/config.h, compiled as tests/config_differential/oracle/src/config.h	7a713cffefcb43b88e66b8bd2b37096316577f267d7f292661fffb25d15bec03
+published reader	dev:src/logging.h, compiled as tests/config_differential/oracle/src/logging.h	809eb2feb225482fb263f307ca699d5235a618a26ca06e73b6818499d774cfb9
+published reader	dev:src/fov_override.h, compiled as tests/config_differential/oracle/src/fov_override.h	412b267118d913f620601c87b39ace813abc4a3dd305889832b678ac1374aa97
+published reader	dev:src/ue_abi.h, compiled as tests/config_differential/oracle/src/ue_abi.h	395bf0c55074b81d58b4ef3b3724ffb1b236e80d6333a57acbd09f93e69da501
+published startup	dev:src/headtracking_mod.cpp, transcribed in tests/config_differential/oracle/oracle_reader.cpp	d4334cdd34228a002840f85a3212bdc981a8fe4cac57486a140ad5c3a9adc49d
+published core source	cameraunlock-core ee8cc72:cpp/include/cameraunlock/config/ini_reader.h	a7ffb44210ff59672fa97e8e5feaa2cb3e81938fcc0334a384c68bc371b3857a
+published core source	cameraunlock-core ee8cc72:cpp/src/config/ini_reader.cpp	e01515c2656aaf533bae4350dc45b702c3e3d4043935743dcc9bd5ea581fbe1c
+published core source	cameraunlock-core ee8cc72:cpp/include/cameraunlock/config/value_guards.h	6d3e3512bdfc9ac2a54bee750c5425191bdb4c24f3ae2ea3b9925612e01c78e5
+published core source	cameraunlock-core ee8cc72:cpp/src/config/value_guards.cpp	a833ff7f2721f7974ce039a3597349a0974e6695ce3e75e598ce5bf4985a14b1
+published core source	cameraunlock-core ee8cc72:cpp/include/cameraunlock/math/finite_utils.h	c59772d698d54ade3374ee1221b74f5563a86d76f0eb34a989ef7efab389c0ad
+published core source	cameraunlock-core ee8cc72:cpp/include/cameraunlock/logging/file_log.h	43bdd2ef8554c78e5f440333463750c13b95110fe672b0b6e273244df9e7d169
+published core source	cameraunlock-core ee8cc72:cpp/src/logging/file_log.cpp	73c53c2baa06bbfebe8211f62678aa2b60cb95f604743d3686951ba56b87ea47
+frozen from	a128a2e:src/config.cpp	57fdeee3ecf1e1762d2616bd9cfdb2226f75f76b6be047d390d882288c672e85
+frozen from	a128a2e:src/config.h	7a713cffefcb43b88e66b8bd2b37096316577f267d7f292661fffb25d15bec03
+frozen reader	src/legacy_config/legacy_config.h	b8206e98c33712fb02407ddeee505d6f3549234822049630f969a47033ac167f
+frozen reader	src/legacy_config/legacy_config.cpp	6d473d04fb66edd6d5564062bc1799c646502f2cae3ec0f17c5452ac3ee84bcc
+input	the file the dev build's WriteDefaultConfigIfMissing writes (dev:src/config.cpp, text mode, so CRLF), tests/config_differential/data/first-run-dev.ini; the test checks the oracle still writes these bytes	d78e2a9fced9a106a80cff4109427ad9409a06899ef255f4c26307d770d948ef

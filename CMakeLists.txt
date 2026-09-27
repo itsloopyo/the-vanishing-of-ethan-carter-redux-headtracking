@@ -74,6 +74,7 @@ set(MOD_CORE_SOURCES
     src/camera_pose.cpp
     src/caller_gate.cpp
     src/config.cpp
+    src/legacy_config/legacy_config.cpp
     src/fov_override.cpp
     src/builds/build_registry.cpp
     src/builds/steam_offsets.cpp
