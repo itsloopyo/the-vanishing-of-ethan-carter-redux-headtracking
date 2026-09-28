@@ -66,14 +66,3 @@ jobs:
             exit 1
           }
           Write-Host "Built $($zip.Name)"
-
-      # So a branch build can be handed to a tester as an artifact. The
-      # alternative is pushing a scratch branch to a public repo, which stays
-      # served by SHA long after the branch is deleted.
-      - name: Upload installer
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: EthanCarterReduxHeadTracking-${{ github.sha }}
-          path: release/*.zip
-          retention-days: 14
-          if-no-files-found: error
