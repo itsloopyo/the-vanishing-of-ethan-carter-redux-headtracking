@@ -16,7 +16,7 @@ here.
 | injector | `3a384e8` (inside Ultimate ASI Loader v9.7.4) | Zlib | Compiled into the vendored dinput8.dll |
 | miniz | 3.0.0 (inside Ultimate ASI Loader v9.7.4) | MIT | Compiled into the vendored dinput8.dll |
 | MinHook | v1.3.3 | BSD-2-Clause | Compiled into `EthanCarterReduxHeadTracking.asi` |
-| cameraunlock-core | e64a81ff0f7bde7ddb3102382a061b4c91f01254 | MIT | Compiled into `EthanCarterReduxHeadTracking.asi` |
+| cameraunlock-core | a03c24290fae3a9c61f67adcb7c5ba4eedf69f20 | MIT | Compiled into `EthanCarterReduxHeadTracking.asi` |
 | OpenTrack | n/a | ISC | Not bundled; UDP protocol interoperability only |
 
 ---
@@ -260,7 +260,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 Git submodule at `cameraunlock-core/`, compiled into `EthanCarterReduxHeadTracking.asi`. Our own code,
 MIT licensed, reproduced here so the notices are complete.
 
-- **Version:** commit `e64a81ff0f7bde7ddb3102382a061b4c91f01254`
+- **Version:** commit `a03c24290fae3a9c61f67adcb7c5ba4eedf69f20`
 - **License:** MIT
 - **Upstream:** https://github.com/itsloopyo/cameraunlock-core
 - **Usage:** Tracker receiver, pose processing, camera and lean-clamp maths shared across every CameraUnlock mod.

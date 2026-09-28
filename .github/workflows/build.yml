@@ -17,19 +17,12 @@ on:
       - 'docs/**'
       - 'LICENSE'
 
-# Least privilege: this job checks out and builds. Nothing here needs write
-# access to the repository.
 permissions:
   contents: read
 
-# One build per ref. Pushing a run of fixup commits otherwise leaves several
-# full Windows C++ builds running, all but the last already obsolete, on a
-# runner that bills at ten times the Linux rate.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  # Superseded branch builds are cancelled; main is not, or a quick follow-up
-  # push would cancel the only run that ever validated the commit before it.
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 jobs:
   build:

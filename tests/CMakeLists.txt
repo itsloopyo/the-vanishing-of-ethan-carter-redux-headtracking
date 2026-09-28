@@ -74,6 +74,7 @@ add_test(NAME ecr_config_lint COMMAND node
     ${ECR_DIFFERENTIAL_DIR}/lint-migrated.mjs
     $<TARGET_FILE_DIR:ecr_config_differential>/migrated)
 set_tests_properties(ecr_config_lint PROPERTIES DEPENDS ecr_config_differential)
+set_tests_properties(ecr_config_differential ecr_config_lint PROPERTIES LABELS differential)
 
 # What the differential test compiles is pinned by hash, line endings aside:
 # the oracle's byte copies must stay the dev build's (git show dev:src/<file>),
